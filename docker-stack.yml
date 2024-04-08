@@ -1,0 +1,126 @@
+version: '3.8'
+
+networks:
+  roboshop:
+    driver: bridge
+
+volumes:
+  mongodb:
+  redis:
+  mysql:
+  rabbitmq:
+
+services:
+  catalogue:
+    image: catalogue:v.01
+    container_name: catalogue
+    depends_on:
+      - mongodb
+    deploy:
+      replicas: 1   # Define 3 replicas for the catalogue service
+
+  mongodb:
+    image: mongodb:v.01
+    container_name: mongodb
+    deploy:
+      replicas: 1
+    volumes:
+      - type: volume
+        source: mongodb
+        target: /data/db
+        volume:
+          nocopy: true
+
+  redis:
+    image: redis
+    container_name: redis
+    deploy:
+      replicas: 1
+    volumes:
+      - type: volume
+        source: redis
+        target: /data
+        volume:
+          nocopy: true
+
+  web:
+    image: web:v.01
+    container_name: web
+    ports:
+      - 80:80
+    depends_on:
+      - catalogue
+      - user
+      - cart
+    deploy:
+      replicas: 1   # Define 2 replicas for the web service
+
+  user:
+    image: user:v.01
+    container_name: user
+    depends_on:
+      - mongodb
+      - redis
+    deploy:
+      replicas: 1   # Define 2 replicas for the user service
+
+  cart:
+    image: cart:v.01
+    container_name: cart
+    depends_on:
+      - catalogue
+      - redis
+    deploy:
+      replicas: 1   # Define 2 replicas for the cart service
+
+  mysql:
+    image: mysql:v.01
+    container_name: mysql
+    deploy:
+      replicas: 1
+    volumes:
+      - type: volume
+        source: mysql
+        target: /var/lib/mysql
+        volume:
+          nocopy: true
+
+  shipping:
+    image: shipping:v.01
+    container_name: shipping
+    depends_on:
+      - cart
+      - mysql
+    deploy:
+      replicas: 1   # Define 2 replicas for the shipping service
+
+  rabbitmq:
+    image: rabbitmq
+    container_name: rabbitmq
+    deploy:
+      replicas: 1
+    volumes:
+      - type: volume
+        source: rabbitmq
+        target: /var/lib/rabbitmq
+        volume:
+          nocopy: true
+
+  payment:
+    image: payment:v.01
+    container_name: payment
+    depends_on:
+      - rabbitmq
+      - cart
+      - user
+    deploy:
+      replicas: 1   # Define 2 replicas for the payment service
+
+  ratings:
+    image: ratings:v.01
+    container_name: ratings
+    depends_on:
+      - mysql
+    deploy:    
+      replicas: 1   # Define 3 replicas for the ratings service
+
